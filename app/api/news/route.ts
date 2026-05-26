@@ -1,4 +1,5 @@
 import Parser from "rss-parser";
+import { unstable_noStore as noStore } from "next/cache";
 import { NextResponse } from "next/server";
 import type { Category, NewsItem, Sentiment } from "@/types/news";
 import { sortNewsByDateAndPriority } from "@/lib/news/sort";
@@ -1043,7 +1044,12 @@ function mergeWithMockData(liveItems: NewsItem[]): NewsItem[] {
   return balanceOverseasItems(dedupedAll);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const forceRefresh = new URL(request.url).searchParams.get("refresh") === "1";
+  if (forceRefresh) {
+    noStore();
+  }
+
   const settledResults = await Promise.allSettled(
     RSS_SOURCES.map((source) => fetchFeed(source)),
   );
@@ -1084,7 +1090,9 @@ export async function GET() {
     },
     {
       headers: {
-        "Cache-Control": `public, s-maxage=${revalidate}, stale-while-revalidate=600`,
+        "Cache-Control": forceRefresh
+          ? "no-store, no-cache, must-revalidate"
+          : `public, s-maxage=${revalidate}, stale-while-revalidate=600`,
       },
     },
   );

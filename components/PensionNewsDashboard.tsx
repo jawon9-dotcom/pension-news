@@ -17,6 +17,7 @@ interface SourceModalState {
 }
 
 const BOOKMARK_STORAGE_KEY = "pension-news-bookmarks";
+const VISITOR_SESSION_KEY = "pension-news-visitor-recorded";
 
 const SEGMENT_TABS: { value: SegmentTab; label: string }[] = [
   { value: "domestic", label: "국내 연기금" },
@@ -144,6 +145,25 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z"
+      />
+    </svg>
+  );
+}
+
+function RefreshIcon({ spinning }: { spinning: boolean }) {
+  return (
+    <svg
+      className={`h-4 w-4 ${spinning ? "animate-spin" : ""}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 4v6h6M20 20v-6h-6M5.64 18.36A9 9 0 0118.36 5.64M18.36 18.36A9 9 0 015.64 5.64"
       />
     </svg>
   );
@@ -356,6 +376,8 @@ export default function PensionNewsDashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<SegmentTab>("domestic");
   const [bookmarkedIds, setBookmarkedIds] = useState<number[]>([]);
+  const [visitorCount, setVisitorCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [sourceModal, setSourceModal] = useState<SourceModalState | null>(
     null,
@@ -376,6 +398,41 @@ export default function PensionNewsDashboard({
     if (!isHydrated) return;
     localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify(bookmarkedIds));
   }, [bookmarkedIds, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    let cancelled = false;
+
+    const recordVisit = async () => {
+      try {
+        const alreadyRecorded = sessionStorage.getItem(VISITOR_SESSION_KEY);
+        const response = await fetch("/api/visitors", {
+          method: alreadyRecorded ? "GET" : "POST",
+          cache: "no-store",
+        });
+
+        if (cancelled || !response.ok) return;
+
+        const data = (await response.json()) as { count?: number };
+        if (typeof data.count === "number") {
+          setVisitorCount(data.count);
+        }
+
+        if (!alreadyRecorded) {
+          sessionStorage.setItem(VISITOR_SESSION_KEY, "1");
+        }
+      } catch {
+        // ignore visitor tracking errors
+      }
+    };
+
+    recordVisit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydrated]);
 
   useEffect(() => {
     if (!isHydrated || newsItems.length > 0) return;
@@ -405,6 +462,27 @@ export default function PensionNewsDashboard({
 
   const handleTabChange = useCallback((tab: SegmentTab) => {
     setActiveTab(tab);
+  }, []);
+
+  const handleRefreshNews = useCallback(async () => {
+    setIsRefreshing(true);
+
+    try {
+      const response = await fetch("/api/news?refresh=1", {
+        cache: "no-store",
+      });
+
+      if (!response.ok) return;
+
+      const data = (await response.json()) as NewsApiResponse;
+      if (data.items?.length) {
+        setNewsItems(data.items);
+      }
+    } catch {
+      // ignore refresh errors
+    } finally {
+      setIsRefreshing(false);
+    }
   }, []);
 
   const tabNews = useMemo(() => {
@@ -465,7 +543,33 @@ export default function PensionNewsDashboard({
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-lg px-5 pb-16 pt-10">
         <header className="mb-8">
-          <p className="mb-1 text-sm font-medium text-gray-400">Pension News</p>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="inline-flex shrink-0 items-center rounded-xl bg-blue-500 px-3.5 py-2 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-md shadow-blue-500/20">
+                Pension News
+              </span>
+              {isHydrated && (
+                <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-500 shadow-sm">
+                  방문
+                  <span className="font-bold tabular-nums text-blue-600">
+                    {visitorCount.toLocaleString("ko-KR")}
+                  </span>
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRefreshNews}
+              disabled={isRefreshing}
+              aria-label="뉴스 새로고침"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm transition-all duration-200 hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+            >
+              <RefreshIcon spinning={isRefreshing} />
+              새로고침
+            </button>
+          </div>
+
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
             글로벌 연기금 뉴스 대시보드
           </h1>
@@ -500,14 +604,10 @@ export default function PensionNewsDashboard({
         <div
           role="tablist"
           aria-label="연기금 카테고리"
-          className="mb-6 flex gap-1 rounded-full bg-gray-200/60 p-1"
+          className="mb-6 flex gap-1 overflow-x-auto rounded-full bg-gray-200/60 p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {SEGMENT_TABS.map((tab) => {
             const isActive = activeTab === tab.value;
-            const tabLabel =
-              tab.value === "bookmarked"
-                ? `내가 찜한 뉴스 📂 (${bookmarkedIds.length})`
-                : tab.label;
 
             return (
               <button
@@ -516,13 +616,22 @@ export default function PensionNewsDashboard({
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => handleTabChange(tab.value)}
-                className={`flex-1 rounded-full px-2 py-2.5 text-xs font-semibold tracking-tight transition-all duration-200 sm:px-3 sm:text-sm ${
+                className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2.5 text-xs font-semibold tracking-tight transition-all duration-200 sm:px-4 sm:text-sm ${
                   isActive
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                {tabLabel}
+                {tab.value === "bookmarked" ? (
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                    내가 찜한 뉴스 📂
+                    <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold leading-none text-blue-500 tabular-nums">
+                      {bookmarkedIds.length}
+                    </span>
+                  </span>
+                ) : (
+                  tab.label
+                )}
               </button>
             );
           })}
