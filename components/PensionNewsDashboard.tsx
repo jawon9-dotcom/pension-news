@@ -153,18 +153,16 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
 function RefreshIcon({ spinning }: { spinning: boolean }) {
   return (
     <svg
-      className={`h-4 w-4 ${spinning ? "animate-spin" : ""}`}
+      className={`h-4 w-4 transition-transform duration-300 ${spinning ? "animate-spin" : ""}`}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden
     >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M4 4v6h6M20 20v-6h-6M5.64 18.36A9 9 0 0118.36 5.64M18.36 18.36A9 9 0 015.64 5.64"
-      />
+      <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
     </svg>
   );
 }
