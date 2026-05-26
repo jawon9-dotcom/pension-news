@@ -22,7 +22,7 @@ const VISITOR_SESSION_KEY = "pension-news-visitor-recorded";
 const SEGMENT_TABS: { value: SegmentTab; label: string }[] = [
   { value: "domestic", label: "국내 연기금" },
   { value: "overseas", label: "해외 연기금" },
-  { value: "bookmarked", label: "내가 찜한 뉴스 📂" },
+  { value: "bookmarked", label: "내가 찜한 뉴스" },
 ];
 
 const SENTIMENT_CONFIG: Record<
@@ -166,6 +166,22 @@ function RefreshIcon({ spinning }: { spinning: boolean }) {
         d="M4 4v6h6M20 20v-6h-6M5.64 18.36A9 9 0 0118.36 5.64M18.36 18.36A9 9 0 015.64 5.64"
       />
     </svg>
+  );
+}
+
+function FolderCountIcon({ count }: { count: number }) {
+  const displayCount = count > 99 ? "99+" : String(count);
+
+  return (
+    <span
+      className="relative inline-flex h-6 w-6 shrink-0 items-center justify-center leading-none"
+      aria-hidden
+    >
+      <span className="text-[1.35rem]">📂</span>
+      <span className="absolute left-1/2 top-[12px] -translate-x-1/2 text-[8px] font-bold leading-none text-amber-950 tabular-nums">
+        {displayCount}
+      </span>
+    </span>
   );
 }
 
@@ -604,7 +620,7 @@ export default function PensionNewsDashboard({
         <div
           role="tablist"
           aria-label="연기금 카테고리"
-          className="mb-6 flex gap-1 overflow-x-auto rounded-full bg-gray-200/60 p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="mb-6 grid grid-cols-3 gap-1 rounded-full bg-gray-200/60 p-1"
         >
           {SEGMENT_TABS.map((tab) => {
             const isActive = activeTab === tab.value;
@@ -615,22 +631,25 @@ export default function PensionNewsDashboard({
                 type="button"
                 role="tab"
                 aria-selected={isActive}
+                aria-label={
+                  tab.value === "bookmarked"
+                    ? `내가 찜한 뉴스 ${bookmarkedIds.length}개`
+                    : tab.label
+                }
                 onClick={() => handleTabChange(tab.value)}
-                className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2.5 text-xs font-semibold tracking-tight transition-all duration-200 sm:px-4 sm:text-sm ${
+                className={`flex min-w-0 items-center justify-center rounded-full px-1 py-2.5 text-center text-[11px] font-semibold leading-tight tracking-tight transition-all duration-200 sm:px-2 sm:text-xs ${
                   isActive
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
                 {tab.value === "bookmarked" ? (
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                    내가 찜한 뉴스 📂
-                    <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold leading-none text-blue-500 tabular-nums">
-                      {bookmarkedIds.length}
-                    </span>
+                  <span className="inline-flex min-w-0 items-center justify-center gap-0.5 whitespace-nowrap sm:gap-1">
+                    <span className="truncate">내가 찜한 뉴스</span>
+                    <FolderCountIcon count={bookmarkedIds.length} />
                   </span>
                 ) : (
-                  tab.label
+                  <span className="whitespace-nowrap">{tab.label}</span>
                 )}
               </button>
             );
