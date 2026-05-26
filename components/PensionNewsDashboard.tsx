@@ -467,7 +467,7 @@ export default function PensionNewsDashboard({
         <header className="mb-8">
           <p className="mb-1 text-sm font-medium text-gray-400">Pension News</p>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-            글로벌 연기금 뉴스
+            글로벌 연기금 뉴스 대시보드
           </h1>
           <p className="mt-2 text-sm leading-relaxed tracking-tight text-gray-500">
             국내·해외 주요 연기금의 실시간 매크로 뉴스를 한곳에서 확인하세요.
@@ -504,6 +504,11 @@ export default function PensionNewsDashboard({
         >
           {SEGMENT_TABS.map((tab) => {
             const isActive = activeTab === tab.value;
+            const tabLabel =
+              tab.value === "bookmarked"
+                ? `내가 찜한 뉴스 📂 (${bookmarkedIds.length})`
+                : tab.label;
+
             return (
               <button
                 key={tab.value}
@@ -517,7 +522,7 @@ export default function PensionNewsDashboard({
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                {tab.label}
+                {tabLabel}
               </button>
             );
           })}
