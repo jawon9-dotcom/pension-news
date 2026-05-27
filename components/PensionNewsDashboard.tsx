@@ -647,7 +647,7 @@ export default function PensionNewsDashboard({
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="기관명, 제목, OCIO, Outsourced CIO 검색"
+            placeholder="기관명, 제목, 요약, 출처 검색"
             className="w-full rounded-2xl border border-transparent bg-white py-3.5 pl-11 pr-11 text-sm tracking-tight text-gray-900 shadow-sm outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-blue-100 focus:ring-2 focus:ring-blue-100"
           />
           {searchQuery.length > 0 && (
