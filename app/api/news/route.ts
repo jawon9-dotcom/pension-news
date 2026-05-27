@@ -159,6 +159,12 @@ const DOMESTIC_TOPIC_KEYWORDS = [
   "aum",
   "수익률",
   "포트폴리오",
+  "ocio",
+  "위탁 cio",
+  "위탁cio",
+  "아웃소싱 cio",
+  "아웃소싱cio",
+  "위탁운용 cio",
 ];
 
 const OVERSEAS_SOURCE_WHITELIST = [
@@ -254,6 +260,9 @@ const OVERSEAS_TOPIC_KEYWORDS = [
   "자금",
   "펀드",
   "allocation",
+  "ocio",
+  "outsourced cio",
+  "outsourced chief investment officer",
 ];
 
 const OVERSEAS_INSTITUTIONAL_CONTEXT = [
@@ -271,6 +280,17 @@ const OVERSEAS_INSTITUTIONAL_CONTEXT = [
   "gpif",
   "gpfg",
   "cppib",
+];
+
+const OCIO_KEYWORDS = [
+  "ocio",
+  "outsourced cio",
+  "outsourced chief investment officer",
+  "위탁 cio",
+  "위탁cio",
+  "아웃소싱 cio",
+  "아웃소싱cio",
+  "위탁운용 cio",
 ];
 
 const BULLISH_KEYWORDS = [
@@ -406,6 +426,13 @@ const RSS_SOURCES: RssSource[] = [
     limit: 10,
   },
   {
+    category: "domestic",
+    url: "https://news.google.com/rss/search?q=(OCIO+OR+%22Outsourced+CIO%22+OR+%EC%9C%84%ED%83%81CIO+OR+%EC%95%84%EC%9B%83%EC%86%8C%EC%8B%B1+CIO)+(%EC%97%B0%EA%B8%B0%EA%B8%88+OR+%EA%B8%B0%EA%B8%88+OR+%EC%9E%90%EC%82%B0%EC%9A%B4%EC%9A%A9)+when:90d&hl=ko&gl=KR&ceid=KR:ko",
+    defaultAgency: "OCIO·위탁운용",
+    defaultSource: "Google News",
+    limit: 10,
+  },
+  {
     category: "overseas",
     url: "https://news.google.com/rss/search?q=CalPERS+(asset+allocation+OR+investment+OR+portfolio+OR+mandate)+when:90d&hl=en&gl=US&ceid=US:en",
     defaultAgency: "CalPERS (미국)",
@@ -481,6 +508,20 @@ const RSS_SOURCES: RssSource[] = [
     defaultAgency: "외부펀드·위탁",
     defaultSource: "Google News",
     limit: 12,
+  },
+  {
+    category: "overseas",
+    url: "https://news.google.com/rss/search?q=(OCIO+OR+%22Outsourced+CIO%22+OR+%22outsourced+chief+investment+officer%22)+(pension+fund+OR+institutional+investor+OR+asset+owner)+when:90d&hl=en&gl=US&ceid=US:en",
+    defaultAgency: "OCIO·위탁운용",
+    defaultSource: "Google News",
+    limit: 12,
+  },
+  {
+    category: "overseas",
+    url: "https://news.google.com/rss/search?q=site:ipe.com+OR+site:top1000funds.com+(OCIO+OR+%22Outsourced+CIO%22)+when:90d&hl=en&gl=US&ceid=US:en",
+    defaultAgency: "OCIO·위탁운용",
+    defaultSource: "Google News",
+    limit: 10,
   },
   {
     category: "overseas",
@@ -570,6 +611,10 @@ function isWhitelistedOverseasSource(source: string, sourceUrl: string): boolean
   );
 }
 
+function hasOcioSignal(title: string, summary: string): boolean {
+  return containsKeyword(`${title} ${summary}`, OCIO_KEYWORDS);
+}
+
 function hasDomesticPensionSignal(title: string, summary: string): boolean {
   return containsKeyword(`${title} ${summary}`, DOMESTIC_PENSION_KEYWORDS);
 }
@@ -596,6 +641,18 @@ function passesDomesticFilter(item: Pick<NewsItem, "title" | "summary" | "source
   const topicSignal = hasDomesticTopicSignal(item.title, item.summary);
   const titlePensionSignal = hasDomesticPensionSignal(item.title, "");
   const titleAssetManagerSignal = hasDomesticAssetManagerSignal(item.title, "");
+
+  if (
+    hasOcioSignal(item.title, item.summary) &&
+    (whitelistedSource ||
+      pensionSignal ||
+      assetManagerSignal ||
+      topicSignal ||
+      titlePensionSignal ||
+      titleAssetManagerSignal)
+  ) {
+    return true;
+  }
 
   if (
     whitelistedSource &&
@@ -638,6 +695,13 @@ function passesOverseasFilter(item: Pick<NewsItem, "title" | "summary" | "source
   const topicSignal = hasOverseasTopicSignal(item.title, item.summary);
   const titleFundSignal = hasOverseasMegaFundSignal(item.title, "");
   const titleTopicSignal = hasOverseasTopicSignal(item.title, "");
+
+  if (
+    hasOcioSignal(item.title, item.summary) &&
+    (whitelistedSource || containsKeyword(text, OVERSEAS_INSTITUTIONAL_CONTEXT))
+  ) {
+    return true;
+  }
 
   if (
     whitelistedSource &&

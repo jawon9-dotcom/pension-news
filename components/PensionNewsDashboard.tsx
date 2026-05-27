@@ -167,6 +167,23 @@ function RefreshIcon({ spinning }: { spinning: boolean }) {
   );
 }
 
+function ScrollTopIcon() {
+  return (
+    <svg
+      className="h-5 w-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M5 15l7-7 7 7" />
+    </svg>
+  );
+}
+
 function FolderCountIcon({ count }: { count: number }) {
   const displayCount = count > 99 ? "99+" : String(count);
 
@@ -392,6 +409,7 @@ export default function PensionNewsDashboard({
   const [bookmarkedIds, setBookmarkedIds] = useState<number[]>([]);
   const [visitorCount, setVisitorCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [sourceModal, setSourceModal] = useState<SourceModalState | null>(
     null,
@@ -412,6 +430,26 @@ export default function PensionNewsDashboard({
     if (!isHydrated) return;
     localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify(bookmarkedIds));
   }, [bookmarkedIds, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated || newsItems.length === 0) return;
+
+    const validIds = new Set(newsItems.map((item) => item.id));
+    setBookmarkedIds((prev) => {
+      const next = prev.filter((id) => validIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [isHydrated, newsItems]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 320);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -478,6 +516,10 @@ export default function PensionNewsDashboard({
     setActiveTab(tab);
   }, []);
 
+  const handleScrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   const handleRefreshNews = useCallback(async () => {
     setIsRefreshing(true);
 
@@ -531,9 +573,14 @@ export default function PensionNewsDashboard({
     [bookmarkedIds],
   );
 
+  const bookmarkedNewsCount = useMemo(
+    () => newsItems.filter((item) => bookmarkedIdSet.has(item.id)).length,
+    [newsItems, bookmarkedIdSet],
+  );
+
   const showBookmarkEmptyState =
     activeTab === "bookmarked" &&
-    bookmarkedIds.length === 0 &&
+    bookmarkedNewsCount === 0 &&
     !searchQuery.trim();
 
   const showSearchEmptyState =
@@ -600,7 +647,7 @@ export default function PensionNewsDashboard({
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="기관명, 제목, 요약, 출처 검색"
+            placeholder="기관명, 제목, OCIO, Outsourced CIO 검색"
             className="w-full rounded-2xl border border-transparent bg-white py-3.5 pl-11 pr-11 text-sm tracking-tight text-gray-900 shadow-sm outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-blue-100 focus:ring-2 focus:ring-blue-100"
           />
           {searchQuery.length > 0 && (
@@ -631,7 +678,7 @@ export default function PensionNewsDashboard({
                 aria-selected={isActive}
                 aria-label={
                   tab.value === "bookmarked"
-                    ? `내가 찜한 뉴스 ${bookmarkedIds.length}개`
+                    ? `내가 찜한 뉴스 ${bookmarkedNewsCount}개`
                     : tab.label
                 }
                 onClick={() => handleTabChange(tab.value)}
@@ -644,7 +691,7 @@ export default function PensionNewsDashboard({
                 {tab.value === "bookmarked" ? (
                   <span className="inline-flex min-w-0 items-center justify-center gap-0.5 whitespace-nowrap sm:gap-1">
                     <span className="truncate">내가 찜한 뉴스</span>
-                    <FolderCountIcon count={bookmarkedIds.length} />
+                    <FolderCountIcon count={bookmarkedNewsCount} />
                   </span>
                 ) : (
                   <span className="whitespace-nowrap">{tab.label}</span>
@@ -677,6 +724,17 @@ export default function PensionNewsDashboard({
 
       {sourceModal && (
         <SourceModal modal={sourceModal} onClose={handleCloseModal} />
+      )}
+
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={handleScrollToTop}
+          aria-label="맨 위로 이동"
+          className="fixed bottom-6 right-5 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-600"
+        >
+          <ScrollTopIcon />
+        </button>
       )}
     </div>
   );
